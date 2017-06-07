@@ -3,7 +3,7 @@
 var win = window,
     doc = document,
     selectors = {
-        iframeCanvas: '#iframe_canvas'
+        ghHeader: '.gh-header-meta'
     };
 
 // declare functions
@@ -29,13 +29,12 @@ function createSortButton() {
     var b = document.createElement('button'),
         s = b.style;
 
-    // s.position = 'fixed';
-    s.display = 'inline-block';
-    s.width = '48px';
-    s.height = '48px';
-    // s.backgroundColor = 'transparent';
+    b.className = 'btn btn-sm';
+    b.textContent = 'sort\'em out!';
+
+    // s.minWidth = '28px';
+    // s.height = '28px';
     s.backgroundImage = 'url("' + getImage('logo-48') + '")';
-    // s.zIndex = '99999';
 
     b.addEventListener('click', function (e) {
         log('clicked the sort button');
@@ -47,18 +46,33 @@ function createSortButton() {
     return b;
 }
 
+function createButtonWrapper(button) {
+    log('creating button wrapper element');
+    var w = document.createElement('div');
+
+    w.className = 'TableObject-item';
+    w.style.padding = '0 1em';
+
+    w.appendChild(button);
+
+    log(w);
+    return w;
+}
+
 function addSortButton() {
     var button = createSortButton();
-    document.querySelector(selectors.iframeCanvas).parentElement.appendChild(button);
+    var buttonWrapper = createButtonWrapper(button);
+    document.querySelector(selectors.ghHeader).appendChild(buttonWrapper);
 }
 
 function getCommentsByCount() {
-    return [].slice.call(document.querySelectorAll('.timeline-comment-wrapper'))
+    return [].slice.call(document.querySelectorAll('.timeline-comment-wrapper:not(.timeline-new-comment)'))
         .map(function (node) {
             var wrapper = node;
             var reactions = [].slice.call(node.querySelectorAll('.comment-reactions-options button'));
             var count = reactions.reduce(function (accum, val) {
-                return accum.concat([].slice.call(val.childNodes));
+                var ar = accum.concat([].slice.call(val.childNodes));
+                return ar;
             }, []).reduce(function (accum, val, key, arr) {
                 var add = 0;
                 if (val.nodeType === Node.TEXT_NODE) {
@@ -74,6 +88,7 @@ function getCommentsByCount() {
                 count: count
             };
         });
+    ;
 }
 
 
@@ -87,6 +102,6 @@ doc.addEventListener('readystatechange', function () {
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     if (message === 'octosort:votes') {
-        goFullscreen();
+        addSortButton();
     }
 });

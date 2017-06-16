@@ -6,14 +6,9 @@
         "activeTab"
     ],
     "web_accessible_resources": [
-        "images/*.png"
+        "images/*.png",
+        "images/*.svg"
     ],
-    "background": {
-        "scripts": [
-            "background.js"
-        ],
-        "persistent": false
-    },
     "content_scripts": [{
         "matches": [
           "https://github.com/*/issues/*"

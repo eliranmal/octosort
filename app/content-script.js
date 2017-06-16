@@ -1,12 +1,176 @@
-// init constants and variables
+var win = window;
+var doc = document;
 
-var win = window,
-    doc = document,
-    selectors = {
-        ghHeader: '.gh-header-meta'
-    };
+// a dmz empty object to ensure a well-known binding context
+var ø = Object.create(null);
 
-// declare functions
+var selectors = {
+    ghHeader: '.gh-header-meta',
+    ghDiscussion: '.discussion-timeline .js-discussion',
+    ghComments: '.discussion-timeline .js-discussion .timeline-comment-wrapper',
+    ghReactions: '.comment-reactions-options button',
+};
+var reactionTypes = {
+    thumbsUp: 'THUMBS_UP',
+    thumbsDown: 'THUMBS_DOWN',
+    laugh: 'LAUGH',
+    hooray: 'HOORAY',
+    confused: 'CONFUSED',
+    heart: 'HEART',
+};
+
+
+function sortCommentsByRank() {
+    // get sorted comments
+    var commentsByRank = domElements(selectors.ghComments)
+        .map(indexCommentByRank)
+        .sort(propertyComparator.bind(ø, 'rank'))
+        .map(unwrap.bind(ø, 'element'));
+    log('commentsByRank:', commentsByRank);
+    // render to dom
+    commentsByRank.forEach(invoke.bind(ø,  'remove'));
+    commentsByRank.reverse().forEach(prependChild.bind(ø, domElement(selectors.ghDiscussion)));
+}
+
+function indexCommentByRank(commentEl) {
+    var rank = commentPositiveRank(commentEl);
+    var commentWrapper = wrap(commentEl, 'element');
+    return Object.defineProperty(commentWrapper, 'rank', wrap(rank, 'value'));
+}
+
+function commentPositiveRank(commentEl) {
+    return domElements(selectors.ghReactions, commentEl)
+    // todo - compute rank instead of filtering stuff out
+        .filter(includePositiveReactionElements)
+        .reduce(childNodeCollector, [])
+        .reduce(domNumbersAccumulator, 0);
+}
+
+function includePositiveReactionElements(reactionEl) {
+    var val = reactionEl.value.split(' ');
+    return val.includes(reactionTypes.thumbsUp) ||
+        val.includes(reactionTypes.hooray) ||
+        val.includes(reactionTypes.heart) ||
+        val.includes(reactionTypes.laugh);
+}
+
+function propertyComparator(prop, a, b) {
+    var aProp = a[prop];
+    var bProp = b[prop];
+    if (aProp < bProp) {
+        return 1;
+    }
+    if (aProp > bProp) {
+        return -1;
+    }
+    return 0;
+}
+
+function domNumbersAccumulator(accum, el) {
+    return accum + nodeTextToNumber(el);
+}
+
+function childNodeCollector(accum, el) {
+    return accum.concat(asArray(el.childNodes));
+}
+
+function prependChild(parent, child) {
+    parent.insertBefore(child, parent.firstChild || null);
+}
+
+
+function addSortButton() {
+    var icon = createIcon();
+    var button = createButton(sortCommentsByRank);
+    var buttonWrapper = createHeaderItemWrapper();
+    var ghHeader = domElement(selectors.ghHeader);
+
+    prependChild(button, icon);
+    buttonWrapper.appendChild(button);
+    ghHeader.appendChild(buttonWrapper);
+}
+
+function createButton(onClick) {
+    var btn = document.createElement('button');
+
+    btn.className = 'btn btn-sm';
+    btn.textContent = 'sort\'em out!';
+    btn.addEventListener('click', onClick, false);
+
+    return btn;
+}
+
+function createIcon() {
+    var icon = document.createElement('span');
+
+    icon.className = 'octicon';
+    icon.style.width = '16px';
+    icon.style.height = '16px';
+    icon.style.marginRight = '4px';
+    icon.style.backgroundImage = 'url("' + getVectorGraphic('thumbsup') + '")';
+
+    return icon;
+}
+
+function createHeaderItemWrapper() {
+    var wrapper = document.createElement('div');
+
+    wrapper.className = 'TableObject-item';
+    wrapper.style.padding = '0 1em';
+
+    return wrapper;
+}
+
+
+function domElements(selector, contextEl) {
+    return asArray((contextEl || doc).querySelectorAll(selector));
+}
+
+function domElement(selector) {
+    return doc.querySelector(selector);
+}
+
+function nodeTextToNumber(el) {
+    if (el.nodeType !== Node.TEXT_NODE) {
+        return 0;
+    }
+    var num = parseInt(el.textContent.trim(), 10);
+    if (isNaN(num)) {
+        return 0;
+    }
+    return num;
+}
+
+function getImage(file) {
+    return getResource('images/' + file + '.png');
+}
+
+function getVectorGraphic(file) {
+    return getResource('images/' + file + '.svg');
+}
+
+function getResource(path) {
+    return chrome.extension.getURL(path);
+}
+
+function asArray(nodeList) {
+    return [].slice.call(nodeList);
+}
+
+function invoke(fnName, obj, arg1, arg2, arg3) {
+    // don't use .apply() .bind() or .call(), to avoid illegal invocation on dom interfaces
+    obj[fnName](arg1, arg2, arg3);
+}
+
+function wrap(item, prop) {
+    var obj = {};
+    obj[prop] = item;
+    return obj;
+}
+
+function unwrap(prop, item) {
+    return item[prop];
+}
 
 function log() {
     console.log.apply(console, arguments);
@@ -16,92 +180,9 @@ function err() {
     console.error.apply(console, arguments);
 }
 
-function getResource(path) {
-    return chrome.extension.getURL(path);
-}
-
-function getImage(file) {
-    return getResource('images/' + file + '.png');
-}
-
-function createSortButton() {
-    log('creating sort button element');
-    var b = document.createElement('button'),
-        s = b.style;
-
-    b.className = 'btn btn-sm';
-    b.textContent = 'sort\'em out!';
-
-    // s.minWidth = '28px';
-    // s.height = '28px';
-    s.backgroundImage = 'url("' + getImage('logo-48') + '")';
-
-    b.addEventListener('click', function (e) {
-        log('clicked the sort button');
-        var commentsByCount = getCommentsByCount();
-        log('commentsByCount:', commentsByCount);
-    }, false);
-
-    log(b);
-    return b;
-}
-
-function createButtonWrapper(button) {
-    log('creating button wrapper element');
-    var w = document.createElement('div');
-
-    w.className = 'TableObject-item';
-    w.style.padding = '0 1em';
-
-    w.appendChild(button);
-
-    log(w);
-    return w;
-}
-
-function addSortButton() {
-    var button = createSortButton();
-    var buttonWrapper = createButtonWrapper(button);
-    document.querySelector(selectors.ghHeader).appendChild(buttonWrapper);
-}
-
-function getCommentsByCount() {
-    return [].slice.call(document.querySelectorAll('.timeline-comment-wrapper:not(.timeline-new-comment)'))
-        .map(function (node) {
-            var wrapper = node;
-            var reactions = [].slice.call(node.querySelectorAll('.comment-reactions-options button'));
-            var count = reactions.reduce(function (accum, val) {
-                var ar = accum.concat([].slice.call(val.childNodes));
-                return ar;
-            }, []).reduce(function (accum, val, key, arr) {
-                var add = 0;
-                if (val.nodeType === Node.TEXT_NODE) {
-                    add = parseInt(val.textContent.trim(), 10);
-                    if (isNaN(add)) {
-                        add = 0;
-                    }
-                }
-                return accum + add;
-            }, 0);
-            return {
-                wrapper: wrapper,
-                count: count
-            };
-        });
-    ;
-}
-
 
 doc.addEventListener('readystatechange', function () {
-    if (doc.readyState == 'complete') {
-        log('ready state is "complete"');
-        // todo
+    if (doc.readyState === 'complete') {
         addSortButton();
     }
 }, false);
-
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
-    if (message === 'octosort:votes') {
-        addSortButton();
-    }
-});

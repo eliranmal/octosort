@@ -1,57 +1,81 @@
-var win = window;
-var doc = document;
-
 // a dmz empty object to ensure a well-known binding context
 var ø = Object.create(null);
 
+// todo - return to simple strings as values, no need for fallback selectors for now
+// values are lists of selectors, in order of search; last selectors act as fallback to previous ones 
 var selectors = {
-    ghHeader: '.gh-header-meta',
-    ghDiscussion: '.discussion-timeline .js-discussion',
-    ghComments: '.discussion-timeline .js-discussion .timeline-comment-wrapper',
-    ghReactions: '.comment-reactions-options button',
-};
-var reactionTypes = {
-    thumbsUp: 'THUMBS_UP',
-    thumbsDown: 'THUMBS_DOWN',
-    laugh: 'LAUGH',
-    hooray: 'HOORAY',
-    confused: 'CONFUSED',
-    heart: 'HEART',
+    ghHeader: ['.gh-header-meta'],
+    ghDiscussion: ['.discussion-timeline .js-discussion'],
+    ghComments: ['.discussion-timeline .js-discussion .timeline-comment-wrapper'],
+    ghCommentReactions: ['.comment-reactions-options .reaction-summary-item'],
 };
 
+// weight for each reaction type
+var reactionScore = {
+    HOORAY: 3,
+    HEART: 3,
+    THUMBS_UP: 2,
+    LAUGH: 1,
+    CONFUSED: -1,
+    THUMBS_DOWN: -2,
+};
+
+
+function init() {
+    // todo - faster loading: build elements before dom ready, attach them on dom ready
+    domReady(addSortButton);
+}
 
 function sortCommentsByRank() {
+    // todo - allow for additional click to return to default sorting
     // get sorted comments
-    var commentsByRank = domElements(selectors.ghComments)
+    findElements(selectors.ghComments)
         .map(indexCommentByRank)
         .sort(propertyComparator.bind(ø, 'rank'))
-        .map(unwrap.bind(ø, 'element'));
-    log('commentsByRank:', commentsByRank);
-    // render to dom
-    commentsByRank.forEach(invoke.bind(ø,  'remove'));
-    commentsByRank.reverse().forEach(prependChild.bind(ø, domElement(selectors.ghDiscussion)));
+        .map(trace) // for debugging
+        .map(unwrap.bind(ø, 'element'))
+        // render to dom
+        .map(invoke.bind(ø, 'remove'))
+        .reverse().map(prependChild.bind(ø, findElement(selectors.ghDiscussion)));
 }
 
 function indexCommentByRank(commentEl) {
-    var rank = commentPositiveRank(commentEl);
+    var rank = commentRank(commentEl);
     var commentWrapper = wrap(commentEl, 'element');
     return Object.defineProperty(commentWrapper, 'rank', wrap(rank, 'value'));
 }
 
-function commentPositiveRank(commentEl) {
-    return domElements(selectors.ghReactions, commentEl)
-    // todo - compute rank instead of filtering stuff out
-        .filter(includePositiveReactionElements)
-        .reduce(childNodeCollector, [])
-        .reduce(domNumbersAccumulator, 0);
+function commentRank(commentEl) {
+    return findElements(selectors.ghCommentReactions, commentEl)
+        .map(extractReactionRank)
+        .reduce(sumAccumulator, 0);
 }
 
-function includePositiveReactionElements(reactionEl) {
-    var val = reactionEl.value.split(' ');
-    return val.includes(reactionTypes.thumbsUp) ||
-        val.includes(reactionTypes.hooray) ||
-        val.includes(reactionTypes.heart) ||
-        val.includes(reactionTypes.laugh);
+function extractReactionRank(reactionEl) {
+    var valueList = (reactionEl.value || '').split(' ');
+    var type = firstResult(valueList, function (v) {
+        return v in reactionScore ? v : null;
+    });
+    var count = extractReactionCount(reactionEl);
+    var score = reactionScore[type];
+    return score * count;
+}
+
+function extractReactionCount(el) {
+    return asArray(el.childNodes).reduce(sumResultAccumulator.bind(ø, parseDomInt), 0);
+}
+
+function prependChild(parentEl, childEl) {
+    parentEl.insertBefore(childEl, parentEl.firstChild || null);
+    // can be used as identity
+    return childEl;
+}
+
+function invoke(fnName, obj, arg1, arg2, arg3) {
+    // don't use .apply() .bind() or .call(), to avoid illegal invocation on dom interfaces
+    obj[fnName](arg1, arg2, arg3);
+    // can be used as identity
+    return obj;
 }
 
 function propertyComparator(prop, a, b) {
@@ -66,71 +90,98 @@ function propertyComparator(prop, a, b) {
     return 0;
 }
 
-function domNumbersAccumulator(accum, el) {
-    return accum + nodeTextToNumber(el);
+function wrap(item, prop) {
+    var obj = {};
+    obj[prop] = item;
+    return obj;
 }
 
-function childNodeCollector(accum, el) {
-    return accum.concat(asArray(el.childNodes));
+function unwrap(prop, item) {
+    return item[prop];
 }
 
-function prependChild(parent, child) {
-    parent.insertBefore(child, parent.firstChild || null);
+function asArray(list, start, end) {
+    return Array.prototype.slice.call(list, start, end);
 }
 
+function sumAccumulator(accum, val) {
+    return accum + val;
+}
+
+function sumResultAccumulator(fn, accum, val) {
+    return accum + fn(val);
+}
+
+function firstResult(arr, fn) {
+    var result;
+    arr.some(function (v) {
+        result = fn(v);
+        return result;
+    });
+    return result;
+}
+
+
+// impure functions
 
 function addSortButton() {
-    var icon = createIcon();
-    var button = createButton(sortCommentsByRank);
-    var buttonWrapper = createHeaderItemWrapper();
-    var ghHeader = domElement(selectors.ghHeader);
-
-    prependChild(button, icon);
-    buttonWrapper.appendChild(button);
-    ghHeader.appendChild(buttonWrapper);
+    var container = findElement(selectors.ghHeader);
+    if (container) {
+        var icon = createIcon();
+        var button = createButton(sortCommentsByRank);
+        var buttonWrapper = createHeaderItemWrapper();
+        prependChild(button, icon);
+        buttonWrapper.appendChild(button);
+        container.appendChild(buttonWrapper);
+    }
 }
 
 function createButton(onClick) {
     var btn = document.createElement('button');
-
-    btn.className = 'btn btn-sm';
+    btn.className = 'btn btn-sm octosort-button';
     btn.textContent = 'sort\'em out!';
     btn.addEventListener('click', onClick, false);
-
     return btn;
 }
 
 function createIcon() {
     var icon = document.createElement('span');
-
-    icon.className = 'octicon';
-    icon.style.width = '16px';
-    icon.style.height = '16px';
-    icon.style.marginRight = '4px';
-    icon.style.backgroundImage = 'url("' + getVectorGraphic('thumbsup') + '")';
-
+    icon.className = 'octicon octosort-button-icon';
+    icon.innerHTML = '&#8693;';
     return icon;
 }
 
 function createHeaderItemWrapper() {
     var wrapper = document.createElement('div');
-
-    wrapper.className = 'TableObject-item';
-    wrapper.style.padding = '0 1em';
-
+    wrapper.className = 'TableObject-item octosort-header-item';
     return wrapper;
 }
 
-
-function domElements(selector, contextEl) {
-    return asArray((contextEl || doc).querySelectorAll(selector));
+function domReady(fn) {
+    document.addEventListener('readystatechange', function () {
+        if (document.readyState === 'complete') {
+            fn();
+        }
+    }, false);
 }
 
-function domElement(selector) {
-    return doc.querySelector(selector);
+function getElement(contextEl, selector) {
+    return (contextEl || document).querySelector(selector);
 }
 
-function nodeTextToNumber(el) {
+function getElements(contextEl, selector) {
+    return asArray((contextEl || document).querySelectorAll(selector));
+}
+
+function findElement(selectors, contextEl) {
+    return firstResult(selectors, getElement.bind(ø, contextEl));
+}
+
+function findElements(selectors, contextEl) {
+    return firstResult(selectors, getElements.bind(ø, contextEl));
+}
+
+function parseDomInt(el) {
     if (el.nodeType !== Node.TEXT_NODE) {
         return 0;
     }
@@ -142,35 +193,21 @@ function nodeTextToNumber(el) {
 }
 
 function getImage(file) {
-    return getResource('images/' + file + '.png');
-}
-
-function getVectorGraphic(file) {
-    return getResource('images/' + file + '.svg');
+    return getResource('images/' + file);
 }
 
 function getResource(path) {
     return chrome.extension.getURL(path);
 }
 
-function asArray(nodeList) {
-    return [].slice.call(nodeList);
+function trace(identity) {
+    // log.apply(ø, [].slice.call(arguments));
+    log(identity);
+    return identity;
 }
 
-function invoke(fnName, obj, arg1, arg2, arg3) {
-    // don't use .apply() .bind() or .call(), to avoid illegal invocation on dom interfaces
-    obj[fnName](arg1, arg2, arg3);
-}
 
-function wrap(item, prop) {
-    var obj = {};
-    obj[prop] = item;
-    return obj;
-}
-
-function unwrap(prop, item) {
-    return item[prop];
-}
+// context capturing functions for non-generic invocations
 
 function log() {
     console.log.apply(console, arguments);
@@ -181,8 +218,4 @@ function err() {
 }
 
 
-doc.addEventListener('readystatechange', function () {
-    if (doc.readyState === 'complete') {
-        addSortButton();
-    }
-}, false);
+init();

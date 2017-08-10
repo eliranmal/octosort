@@ -1,31 +1,36 @@
 {
-    "name": "octosort",
-    "description": "sorts github issue comments by votes",
-    "version": "0.1.0",
-    "permissions": [
-        "activeTab"
-    ],
-    "web_accessible_resources": [
-        "images/*.png",
-        "images/*.svg"
-    ],
-    "content_scripts": [{
-        "matches": [
-          "https://github.com/*/issues/*"
-        ],
-        "js": [
-            "content-script.js"
-        ],
-        "run_at": "document_end"
-    }],
-    "browser_action": {
-        "default_title": "octosort",
-        "default_icon": "images/logo-48.png"
-    },
-    "icons": {
-        "48": "images/logo-48.png",
-        "96": "images/logo-96.png",
-        "128": "images/logo-128.png"
-    },
-    "manifest_version": 2
+  "name": "octosort",
+  "description": "sorts github issue comments by reactions",
+  "version": "0.1.0",
+  "permissions": [
+    "activeTab"
+  ],
+  "web_accessible_resources": [
+    "images/*.png",
+    "images/*.svg"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*/issues/*"
+      ],
+      "css": [
+        "styles/styles.css"
+      ],
+      "js": [
+        "content-script.js"
+      ],
+      "run_at": "document_end"
+    }
+  ],
+  "browser_action": {
+    "default_title": "octosort",
+    "default_icon": "images/logo-48.png"
+  },
+  "icons": {
+    "48": "images/logo-48.png",
+    "96": "images/logo-96.png",
+    "128": "images/logo-128.png"
+  },
+  "manifest_version": 2
 }

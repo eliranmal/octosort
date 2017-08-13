@@ -1,3 +1,6 @@
+// todo - in the options page:
+// todo - - provide a way to preserve the position of the first comment
+
 // a dmz empty object to ensure a well-known binding context
 var ø = Object.create(null);
 
@@ -127,34 +130,62 @@ function firstResult(arr, fn) {
 function addSortButton() {
     var container = findElement(selectors.ghHeader);
     if (container) {
-        var icon = createIcon();
-        var button = createButton(sortCommentsByRank);
-        var buttonWrapper = createHeaderItemWrapper();
-        prependChild(button, icon);
-        buttonWrapper.appendChild(button);
-        container.appendChild(buttonWrapper);
+        container.appendChild(
+            createElement('div',
+                {
+                    className: 'TableObject-item octosort-header-item'
+                },
+                createElement('div',
+                    {
+                        className: 'BtnGroup octosort-button-group'
+                    },
+                    createElement('button',
+                        {
+                            className: 'btn btn-sm octosort-button BtnGroup-item tooltipped tooltipped-s',
+                            onclick: sortCommentsByRank,
+                            'aria-label': 'sort comments by reactions'
+                        },
+                        createElement('span',
+                            {
+                                className: 'octicon octosort-button-icon'
+                            },
+                            '&#8693;'
+                        ),
+                        'sort\'em out!'
+                    ),
+                    createElement('button',
+                        {
+                            className: 'btn btn-sm octosort-button BtnGroup-item'
+                        },
+                        'another button!'
+                    )
+                )
+            )
+        );
     }
 }
 
-function createButton(onClick) {
-    var btn = document.createElement('button');
-    btn.className = 'btn btn-sm octosort-button';
-    btn.textContent = 'sort\'em out!';
-    btn.addEventListener('click', onClick, false);
-    return btn;
-}
-
-function createIcon() {
-    var icon = document.createElement('span');
-    icon.className = 'octicon octosort-button-icon';
-    icon.innerHTML = '&#8693;';
-    return icon;
-}
-
-function createHeaderItemWrapper() {
-    var wrapper = document.createElement('div');
-    wrapper.className = 'TableObject-item octosort-header-item';
-    return wrapper;
+function createElement(type, props) {
+    var key, val;
+    var innerElements = [].slice.call(arguments, 2);
+    var el = document.createElement(type);
+    innerElements.forEach(function (innerEl) {
+        if (typeof innerEl === 'string') {
+            el.insertAdjacentHTML('beforeend', innerEl);
+        } else if (innerEl instanceof Element) {
+            el.appendChild(innerEl);
+        }
+    });
+    for (key in props) {
+        if (!props.hasOwnProperty(key)) continue;
+        val = props[key];
+        if (key in el) {
+            el[key] = val;
+        } else {
+            el.setAttribute(key, val);
+        }
+    }
+    return el;
 }
 
 function domReady(fn) {

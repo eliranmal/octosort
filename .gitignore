@@ -1,7 +1,69 @@
 
-# os/ide
+# OS
+
+## mac os
+*.DS_Store
+.AppleDouble
+.LSOverride
+
+### Icon must end with two \r
+Icon
+
+
+### thumbnails
+._*
+
+
+# IDE
+
+## intellij
 .idea
+*.iws
+out/
 *.iml
 
-# project
+## vscode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+
+# logs
+
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+
+# runtime data
+
+pids
+*.pid
+*.seed
+*.pid.lock
+
+
+# testing
+
+lib-cov
+coverage
+.nyc_output
+
+
+# build artifacts
+
+.grunt
+.yarn-integrity
+node_modules/
 export
+
+## npm pack output
+*.tgz
+
+## cached data
+.npm
+.eslintcache

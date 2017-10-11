@@ -38,7 +38,7 @@ main() {
 	restore_stash
 
 	log "set default status as success"
-	local status=0
+	local status=1
 
 #	log "activate code analysis on changed files."
 #	echo "${modified_files[@]}" | difference ${lint_exclude_pattern} | lint_code

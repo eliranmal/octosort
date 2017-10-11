@@ -12,7 +12,7 @@ var selectors = {
     ghHeader: ['.gh-header-meta'],
     ghDiscussion: ['.discussion-timeline .js-discussion'],
     ghComments: ['.discussion-timeline .js-discussion .timeline-comment-wrapper'],
-    ghCommentReactions: ['.comment-reactions-options .reaction-summary-item']
+    ghCommentReactions: ['.comment-reactions-options .reaction-summary-item'],
 };
 
 // weight for each reaction type
@@ -22,8 +22,9 @@ var reactionScore = {
     THUMBS_UP: 2,
     LAUGH: 1,
     CONFUSED: -1,
-    THUMBS_DOWN: -2
+    THUMBS_DOWN: -2,
 };
+
 
 function init() {
     // todo - faster loading: build elements before dom ready, attach them on dom ready
@@ -33,10 +34,14 @@ function init() {
 function sortCommentsByRank() {
     // todo - allow for additional click to return to default sorting
     // get sorted comments
-    findElements(selectors.ghComments).map(indexCommentByRank).sort(propertyComparator.bind(ø, 'rank')).map(trace) // for debugging
-    .map(unwrap.bind(ø, 'element'))
-    // render to dom
-    .map(invoke.bind(ø, 'remove')).reverse().map(prependChild.bind(ø, findElement(selectors.ghDiscussion)));
+    findElements(selectors.ghComments)
+        .map(indexCommentByRank)
+        .sort(propertyComparator.bind(ø, 'rank'))
+        .map(trace) // for debugging
+        .map(unwrap.bind(ø, 'element'))
+        // render to dom
+        .map(invoke.bind(ø, 'remove'))
+        .reverse().map(prependChild.bind(ø, findElement(selectors.ghDiscussion)));
 }
 
 function indexCommentByRank(commentEl) {
@@ -46,7 +51,9 @@ function indexCommentByRank(commentEl) {
 }
 
 function commentRank(commentEl) {
-    return findElements(selectors.ghCommentReactions, commentEl).map(extractReactionRank).reduce(sumAccumulator, 0);
+    return findElements(selectors.ghCommentReactions, commentEl)
+        .map(extractReactionRank)
+        .reduce(sumAccumulator, 0);
 }
 
 function extractReactionRank(reactionEl) {
@@ -119,24 +126,44 @@ function firstResult(arr, fn) {
     return result;
 }
 
+
 // impure functions
 
 function addSortButton() {
     var container = findElement(selectors.ghHeader);
     if (container) {
-        container.appendChild(createElement('div', {
-            className: 'TableObject-item octosort-header-item'
-        }, createElement('div', {
-            className: 'BtnGroup octosort-button-group'
-        }, createElement('button', {
-            className: 'btn btn-sm octosort-button BtnGroup-item tooltipped tooltipped-s',
-            onclick: sortCommentsByRank,
-            'aria-label': 'sort comments by reactions'
-        }, createElement('span', {
-            className: 'octicon octosort-button-icon'
-        }, '&#8693;'), 'sort\'em out!'), createElement('button', {
-            className: 'btn btn-sm octosort-button BtnGroup-item'
-        }, 'another button!'))));
+        container.appendChild(
+            createElement('div',
+                {
+                    className: 'TableObject-item octosort-header-item'
+                },
+                createElement('div',
+                    {
+                        className: 'BtnGroup octosort-button-group'
+                    },
+                    createElement('button',
+                        {
+                            className: 'btn btn-sm octosort-button BtnGroup-item tooltipped tooltipped-s',
+                            onclick: sortCommentsByRank,
+                            'aria-label': 'sort comments by reactions'
+                        },
+                        createElement('span',
+                            {
+                                className: 'octicon octosort-button-icon'
+                            },
+                            '&#8693;'
+                        ),
+                        'sort\'em out!'
+                    ),
+                    createElement('button',
+                        {
+                            className: 'btn btn-sm octosort-button BtnGroup-item'
+                        },
+                        'another button!'
+                    )
+                )
+            )
+        );
     }
 }
 
@@ -210,6 +237,7 @@ function trace(identity) {
     return identity;
 }
 
+
 // context capturing functions for non-generic invocations
 
 function log() {
@@ -219,5 +247,6 @@ function log() {
 function err() {
     console.error.apply(console, arguments);
 }
+
 
 init();

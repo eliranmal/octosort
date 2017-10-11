@@ -1,0 +1,16 @@
+{
+  "name": "octosort",
+  "version": "0.1.0",
+  "description": "sorts github issue comments by reactions",
+  "main": "index.js",
+  "repository": "https://github.com/eliranmal/octosort.git",
+  "author": "eliranmal <eliranmal@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "npm run build -- --watch",
+    "build": "babel src/content-script.js --out-file app/content-script.js"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1"
+  }
+}

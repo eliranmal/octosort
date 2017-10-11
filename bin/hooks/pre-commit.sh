@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+
+
+main() {
+	local git_root
+	local old_stash
+	local new_stash
+	local changed_files
+	local modified_files
+	local diff_revision
+	local lint_exclude_pattern='.+\.template|.+\.md|.+\.log|LICENSE|VERSION|\.gitignore|\.gitmodules'
+
+	git_root="$(git rev-parse --show-toplevel)"
+	diff_revision="$(against_revision)"
+
+	# uncomment this line if you want to see the logs
+#	exec &> ${git_root}/pre-commit.log
+
+	log "first, stash index and work dir, keeping only the to-be-committed changes in the working directory."
+	old_stash=$(get_stash)
+	save_stash
+	new_stash=$(get_stash)
+
+	if [ "$old_stash" = "$new_stash" ]; then
+		log "nothing was stashed, this means there were no changes (e.g. '--amend', '--allow-empty'), so skip everything."
+		exit 0
+	fi
+
+	log "get real changes of the commit to be done."
+	changed_files=( $(git diff --cached --name-only --diff-filter=ACDM "$diff_revision") )
+	log_loop "changed files:" "${changed_files[@]}"
+
+	log "get added/modified files for the linter"
+	modified_files=( $(git diff --cached --name-only --diff-filter=AM "$diff_revision") )
+	log_loop "modified files:" "${modified_files[@]}"
+
+	log "we want to add some changes to the staging area later, so unstash beforehand."
+	restore_stash
+
+	log "set default status as success"
+	local status=0
+
+#	log "activate code analysis on changed files."
+#	echo "${modified_files[@]}" | difference ${lint_exclude_pattern} | lint_code
+#	status=$(($? + status)) # referring $? is ok here, we only want the status of the last command in the pipeline
+#	if (( status != 0 )); then
+#		quit $status # no point in continuing, abort
+#	fi
+
+#	log "look for changes in files that are known to affect the help output (public files)."
+#	if [[ ${changed_files[@]} =~ git-flux* ]]; then
+#		log "changes were found in public files, rendering usage docs."
+#		generate_usage_docs "$git_root"
+#		status=$(($? + status))
+#	fi
+
+#	log "look for changes in files that are known to affect the manifest."
+#	if [[ ${changed_files[@]} =~ VERSION ]]; then
+#		log "affecting changes were found, updating manifest."
+#		update_manifest "$git_root"
+#		status=$(($? + status))
+#	fi
+
+	quit $status # nonzero prevents commit
+}
+
+get_stash() {
+	git rev-parse -q --verify refs/stash
+}
+
+save_stash() {
+	git stash save -q --keep-index
+}
+
+restore_stash() {
+	log "don't let internal git-stash implementation stand in our way: set config to ignore trailing-whitespace errors on git-apply"
+	git config core.whitespace -trailing-space
+	log "restore changes from stash"
+	git reset --hard -q && git stash apply --index -q && git stash drop -q
+	log "restore previous config"
+	git config --unset core.whitespace -trailing-space
+}
+
+lint_code() {
+	local files
+	if ! hash shellcheck 2>/dev/null; then
+		log "shellcheck is not installed, skipping analysis."
+		return 0
+	fi
+	files=($(cat -))
+	if (( ${#files[@]} == 0 )); then
+		log "no files passed, skipping analysis."
+		return 0
+	fi
+	log_loop "files to be analyzed:" "${files[@]}"
+	shellcheck "${files[@]}"
+}
+
+generate_usage_docs() {
+	local git_root="$1"
+	log "install git-flux from source to get the local changes in the help output"
+	"$git_root"/bin/setup-dev.sh update || { return 1; }
+	log "render usage docs"
+	"$git_root"/bin/usage.sh || { return 2; }
+	log "add change to index (staging area)"
+	git add -v "$git_root"/usage || { return 3; }
+	return 0
+}
+
+update_manifest() {
+	local git_root="$1"
+	local output_file="$git_root"/gitflux-manifest
+	log "render manifest changes"
+	( env OUTPUT_FILE="$output_file" "$git_root"/bin/render-manifest.sh ) || { return 1; }
+	log "add change to index (staging area)"
+	git add -v "$output_file" || { return 2; }
+	return 0
+}
+
+against_revision() {
+	local against
+	if git rev-parse --verify HEAD >/dev/null 2>&1; then
+		against=HEAD
+	else
+		# initial commit: diff against an empty tree object
+		against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
+	fi
+	printf "%s" "$against"
+}
+
+difference() {
+	local pattern=$1
+	local -r array=($(cat -))
+	if [[ ! ${array[@]} =~ $pattern ]]; then
+		echo "${array[@]}"
+	else
+		for item in "${array[@]}"; do
+			if [[ ! $item =~ $pattern ]]; then
+				echo "$item"
+			fi
+		done
+	fi
+}
+
+log() {
+	echo " [pre-commit] $1"
+}
+
+log_loop() {
+	local message="$1"; shift
+	log "$message"
+	for arg in "$@"; do
+		log "   $arg"
+	done
+}
+
+quit() {
+	local status=$1
+	log "exit with status $status."
+	exit "$status" # nonzero prevents commit
+}
+
+
+main

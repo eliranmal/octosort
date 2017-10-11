@@ -28,7 +28,7 @@ var reactionScore = {
 
 function init() {
     // todo - faster loading: build elements before dom ready, attach them on dom ready
-    domReady(addSortButton);
+    domReady(render);
 }
 
 function sortCommentsByRank() {
@@ -129,7 +129,7 @@ function firstResult(arr, fn) {
 
 // impure functions
 
-function addSortButton() {
+function render() {
     var container = findElement(selectors.ghHeader);
     if (container) {
         container.appendChild(

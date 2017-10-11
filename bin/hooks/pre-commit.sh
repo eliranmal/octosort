@@ -14,7 +14,7 @@ main() {
 	diff_revision="$(against_revision)"
 
 	# uncomment this line if you want to see the logs
-#	exec &> ${git_root}/pre-commit.log
+	exec &> ${git_root}/pre-commit.log
 
 	log "first, stash index and work dir, keeping only the to-be-committed changes in the working directory."
 	old_stash=$(get_stash)

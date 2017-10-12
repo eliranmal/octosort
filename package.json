@@ -7,11 +7,13 @@
   "author": "eliranmal <eliranmal@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "npm run dev",
-    "dev": "./bin/dev-env.sh && npm run build -- --watch",
-    "build": "babel src/content-script.js --out-file app/content-script.js"
+    "start": "./bin/dev-env.sh && npm install && npm run dev",
+    "dev": "npm run build -- --watch",
+    "prod": "npm run build -- --minified --no-comments",
+    "build": "rm -rf app/js && babel src --out-dir app/js --source-maps"
   },
   "devDependencies": {
-    "babel-cli": "^6.24.1"
+    "babel-cli": "^6.24.1",
+    "babel-preset-env": "^1.6.0"
   }
 }

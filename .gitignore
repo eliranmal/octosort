@@ -67,3 +67,6 @@ export
 ## cached data
 .npm
 .eslintcache
+
+## babel output
+app/js

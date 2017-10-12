@@ -11,7 +11,7 @@
     "dev": "npm run build -- --watch",
     "prod": "npm run build -- --minified --no-comments",
     "build": "rm -rf app/src && babel src --out-dir app/src --source-maps",
-    "pack": "echo 'not implemented yet...'"
+    "pack": "./bin/pack.sh"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

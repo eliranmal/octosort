@@ -18,7 +18,7 @@
         "styles/styles.css"
       ],
       "js": [
-        "js/content-script.js"
+        "src/content-script.js"
       ],
       "run_at": "document_end"
     }

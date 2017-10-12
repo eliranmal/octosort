@@ -7,10 +7,11 @@
   "author": "eliranmal <eliranmal@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "./bin/dev-env.sh && npm install && npm run dev",
+    "start": "npm install && npm run dev",
     "dev": "npm run build -- --watch",
     "prod": "npm run build -- --minified --no-comments",
-    "build": "rm -rf app/js && babel src --out-dir app/js --source-maps"
+    "build": "rm -rf app/src && babel src --out-dir app/src --source-maps",
+    "pack": "echo 'not implemented yet...'"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

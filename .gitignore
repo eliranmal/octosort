@@ -69,4 +69,4 @@ export
 .eslintcache
 
 ## babel output
-app/js
+app/src

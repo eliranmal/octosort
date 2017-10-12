@@ -130,7 +130,7 @@ function firstResult(arr, fn) {
 // impure functions
 
 function render() {
-    var container = findElement(selectors.ghHeader);
+    const container = findElement(selectors.ghHeader);
     if (container) {
         container.appendChild(
             createElement('div',
